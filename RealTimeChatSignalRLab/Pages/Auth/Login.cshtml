@@ -1,0 +1,23 @@
+﻿@page
+@model RealTimeChatSignalRLab.Pages.Auth.LoginModel
+@{
+    ViewData["CustomCssLink"] = "~/css/login.css";
+}
+<h3 class="text-center">Login</h3>
+<div class="text-center">
+    <form class="form-control mt-3 w-50" asp-page="auth/login" method="post">
+        <div class="input-container mt-3">
+            <label asp-for="Email" class="fixed-width-label">Email:</label>
+            <input class="form-control" asp-for="Email" type="email" required />
+        </div>
+        <div class="input-container mt-3">
+            <label asp-for="Password" class="fixed-width-label">Password:</label>
+            <input class="form-control" asp-for="Password" type="password" required />
+        </div>
+        @if (Model.Error)
+        {
+            <div class="text-danger">@Model.Message</div>
+        }
+        <input class="form-control btn btn-primary mt-3" type="submit" value="Login" />
+    </form>
+</div>

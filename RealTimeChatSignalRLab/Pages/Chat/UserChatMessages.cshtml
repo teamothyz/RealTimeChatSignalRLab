@@ -1,0 +1,25 @@
+﻿@page 
+@model RealTimeChatSignalRLab.Pages.Chat.UserChatMessagesModel
+@{
+}
+@*<h4>User Chat</h4>
+
+<div class="btn btn-primary mt-3" onclick="viewmore()">View More</div>
+<ul id="message-group-list" class="list-group mt-3">
+    @foreach (var message in Model.Messages.OrderBy(x => x.Item2.SendTime))
+    {
+        var vietnamTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+        var dateTime = new DateTime(message.Item2.SendTime);
+        var vietnamDateTime = TimeZoneInfo.ConvertTimeFromUtc(dateTime, vietnamTimeZone);
+
+            <li class="list-group-item">
+                <div class="btn float-start">@message.Item1.Fullname</div>
+                <div class="btn float-start">@message.Item2.Content</div>
+                <div class="btn float-end">@(vietnamDateTime.ToString("HH:mm:ss dd/MM/yyyy"))</div>
+            </li>
+    }
+</ul>
+<div>
+    <textarea id="message-content" class="form-control" rows="5"></textarea>
+    <div id="send-btn" class="btn btn-primary mt-2">Send</div>
+</div>*@

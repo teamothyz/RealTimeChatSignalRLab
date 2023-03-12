@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.4.33205.214
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RealTimeChatSignalRLab", "RealTimeChatSignalRLab\RealTimeChatSignalRLab.csproj", "{27F4ED97-8F2E-46CB-9EF9-4278EEC75527}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{27F4ED97-8F2E-46CB-9EF9-4278EEC75527}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{27F4ED97-8F2E-46CB-9EF9-4278EEC75527}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{27F4ED97-8F2E-46CB-9EF9-4278EEC75527}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{27F4ED97-8F2E-46CB-9EF9-4278EEC75527}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {F0BA0271-6708-4F61-89E8-1534E15CE95D}
+	EndGlobalSection
+EndGlobal

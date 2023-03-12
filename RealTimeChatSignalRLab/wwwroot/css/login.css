@@ -1,0 +1,20 @@
+﻿form.form-control {
+    margin: auto;
+}
+
+div.input-container {
+    display: flex;
+}
+
+label.fixed-width-label, input.form-control {
+    margin: auto;
+}
+
+label.fixed-width-label {
+    text-align: left;
+    width: 100px;
+}
+
+input[type='submit'] {
+    width: 100px;
+}

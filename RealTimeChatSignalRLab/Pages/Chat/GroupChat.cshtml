@@ -1,0 +1,98 @@
+﻿@page "/groups/{pageIndex:int?}"
+@model RealTimeChatSignalRLab.Pages.Chat.GroupChatModel
+@{
+}
+<form class="d-flex flex-row" asp-page="/Chat/GroupChat" asp-page-handler="Create" method="post">
+    <div class="w-auto mt-1 mx-3">Group Name: </div>
+    <input class="form-control w-auto" asp-for="GroupName" required/>
+    <input class="form-control btn-primary w-auto mx-3" type="submit" value="Create Group" />
+</form>
+
+<ul id="group-list" class="list-group mt-3">
+    @foreach (var usergroup in Model.UserGroups)
+    {
+        <li id="@usergroup.Item1.Id" class="list-group-item">
+            <a class="float-start btn" href="/groups/@usergroup.Item1.Id/chat">@(usergroup.Item1.Name):</a>
+            <input class="float-end mt-2" type="radio" @(usergroup.Item3 ? "checked" : "") />
+            @if (usergroup.Item2 != null)
+            {
+                var vietnamTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+                var dateTime = new DateTime(usergroup.Item2.SendTime);
+                var vietnamDateTime = TimeZoneInfo.ConvertTimeFromUtc(dateTime, vietnamTimeZone);
+
+                <div class="float-start btn">@usergroup.Item2.Content</div>
+                <div class="float-end btn">@(vietnamDateTime.ToString("HH:mm:ss dd/MM/yyyy"))</div>
+            }
+        </li>
+    }
+</ul>
+
+<script>
+    const options = {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+    };
+
+    var connection = new signalR.HubConnectionBuilder().withUrl("/chat").build();
+    connection.start().catch(function (err) {
+        console.error(error.toString())
+    });
+
+    connection.on("GroupMessage", function (message, group, username) {
+        pushGroupToTop(message, group);
+    });
+
+    connection.on("GroupMessageSeen", function (groupId) {
+        let li = document.getElementById(groupId.toString());
+        if (li) {
+            let input = li.getElementsByTagName('input')[0];
+            input.removeAttribute('checked');
+        }
+    });
+
+    function pushGroupToTop(message, group) {
+        let li = document.createElement('li');
+        li.classList.add('list-group-item');
+        li.setAttribute('id', group.id);
+
+        let a = document.createElement('a');
+        a.classList.add('float-start', 'btn');
+        a.setAttribute('href', `/groups/${group.id}/chat`);
+        a.textContent = group.name;
+
+        let div1 = document.createElement('div');
+        div1.classList.add('float-start', 'btn');
+        div1.textContent = message.content;
+
+        let input = document.createElement('input');
+        input.classList.add('float-end', 'mt-2');
+        input.setAttribute('type', 'radio');
+        input.setAttribute('checked', '');
+
+        const date = new Date(message.sendTime / 10000 - 62135596800000);
+        let div2 = document.createElement('div');
+        div2.classList.add('float-end', 'btn');
+        div2.textContent = date.toLocaleString('vi-VN', options);
+
+        li.appendChild(a);
+        li.appendChild(input);
+        li.appendChild(div1);
+        li.appendChild(div2);
+
+        let container = document.getElementById('group-list');
+        let existedLi = document.getElementById(group.id);
+        if (existedLi) {
+            container.removeChild(existedLi);
+        }
+        if (container.children.length > 0) {
+            container.insertBefore(li, container.firstChild);
+        }
+        else {
+            container.appendChild(li);
+        }
+    }
+</script>

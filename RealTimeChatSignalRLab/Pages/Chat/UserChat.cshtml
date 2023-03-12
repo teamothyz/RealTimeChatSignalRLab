@@ -1,0 +1,106 @@
+﻿@page "users/{pageIndex:int?}"
+@model RealTimeChatSignalRLab.Pages.Chat.UserChatModel
+@{
+}
+
+<form class="d-flex flex-row" asp-page="/Chat/UserChatMessages" asp-page-handler="Create" method="post">
+    <div class="w-auto mt-1 mx-3">Email: </div>
+    <input class="form-control w-auto" name="email" type="email" required />
+    <input class="form-control btn-primary w-auto mx-3" type="submit" value="New Chat" />
+</form>
+
+<ul id="group-list" class="list-group mt-3">
+    @foreach (var user in Model.Users)
+    {
+        <li id="@user.Item1.Id" class="list-group-item">
+            <a class="float-start btn" href="/groups/@user.Item1.Id/chat">@(user.Item1.Fullname):</a>
+            <input class="float-end mt-2" type="radio" @(user.Item3 ? "checked" : "") />
+            @if (user.Item2 != null)
+            {
+                var vietnamTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+                var dateTime = new DateTime(user.Item2.SendTime);
+                var vietnamDateTime = TimeZoneInfo.ConvertTimeFromUtc(dateTime, vietnamTimeZone);
+
+                <div class="float-start btn">@user.Item2.Content</div>
+                <div class="float-end btn">@(vietnamDateTime.ToString("HH:mm:ss dd/MM/yyyy"))</div>
+            }
+        </li>
+    }
+</ul>
+<script>
+    const options = {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+    };
+
+    var connection = new signalR.HubConnectionBuilder().withUrl("/chat").build();
+    connection.start().catch(function (err) {
+        console.error(error.toString())
+    });
+
+    connection.on("UserRecieveMessage", function (message, sender) {
+        console.log(message, sender);
+        pushMessageToTop(message, sender, true);
+    });
+
+    connection.on("UserSendMessage", function (message, reciever) {
+        console.log(message, reciever);
+        pushMessageToTop(message, reciever, false);
+    });
+
+    connection.on("UserSeenMessage", function (senderId) {
+        let li = document.getElementById(senderId.toString());
+        if (li) {
+            let input = li.getElementsByTagName('input')[0];
+            input.removeAttribute('checked');
+        }
+    });
+
+    function pushMessageToTop(message, user, isRecieved) {
+        let li = document.createElement('li');
+        li.classList.add('list-group-item');
+        li.setAttribute('id', user.id.toString());
+
+        let a = document.createElement('a');
+        a.classList.add('float-start', 'btn');
+        a.setAttribute('href', `/users/${user.id}/chat`);
+        a.textContent = user.fullname;
+
+        let div1 = document.createElement('div');
+        div1.classList.add('float-start', 'btn');
+        div1.textContent = message.content;
+
+        let input = document.createElement('input');
+        input.classList.add('float-end', 'mt-2');
+        input.setAttribute('type', 'radio');
+        if (isRecieved) {
+            input.setAttribute('checked', '');
+        }
+
+        const date = new Date(message.sendTime / 10000 - 62135596800000);
+        let div2 = document.createElement('div');
+        div2.classList.add('float-end', 'btn');
+        div2.textContent = date.toLocaleString('vi-VN', options);
+
+        li.appendChild(a);
+        li.appendChild(input);
+        li.appendChild(div1);
+        li.appendChild(div2);
+
+        let container = document.getElementById('group-list');
+        let existedLi = document.getElementById(user.id);
+        if (existedLi) {
+            container.removeChild(existedLi);
+        }
+        if (container.children.length > 0) {
+            container.insertBefore(li, container.firstChild);
+        }
+        else {
+            container.appendChild(li);
+        }
+    }
+</script>
