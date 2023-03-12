@@ -17,9 +17,11 @@ namespace RealTimeChatSignalRLab.Pages.Chat
         private readonly IUserRepository userRepository;
 
         [BindProperty(SupportsGet = true)]
-        public int PageIndex { get; set; } = 1;
+        public int PageIndex { get; set; } = 1; 
+        [BindProperty(SupportsGet = true)]
+        public string Email { get; set; }
 
-        public PaginatedList<Tuple<User, Message, bool>> Users { get; set; }
+        public PaginatedList<Tuple<User, Message?, bool>> Users { get; set; }
 
         public UserChatModel(IGroupRepository groupRepository,
             IUserGroupRepository userGroupRepository,
@@ -37,6 +39,12 @@ namespace RealTimeChatSignalRLab.Pages.Chat
             var userId = User.Claims.First(claim => claim.Type == ClaimTypes.NameIdentifier).Value;
             Users = await messageRepository.GetUserChat(PageIndex, Guid.Parse(userId));
             return Page();
+        }
+
+        public async Task<IActionResult> OnPostNewChat()
+        {
+            var users = await userRepository.GetUserByEmails(new List<string> { Email });
+            return RedirectToPage("/Chat/UserChatMessages", new { users[0].Id });
         }
     }
 }

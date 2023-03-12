@@ -37,7 +37,7 @@ namespace RealTimeChatSignalRLab.ChatController
             if (string.IsNullOrWhiteSpace(recieverId)) return;
 
             var readTask = _messageRepository.ReadMessage(senderId, Guid.Parse(recieverId));
-            var sendTask = Clients.User(recieverId).SendAsync("UserSeenMessage", senderId);
+            var sendTask = Clients.User(recieverId).SendAsync("SeenUserMessage", senderId);
             await Task.WhenAll(readTask, sendTask);
         }
     }

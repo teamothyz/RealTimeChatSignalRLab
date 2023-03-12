@@ -1,25 +1,97 @@
-﻿@page 
+﻿@page "/users/{id:Guid}/chat"
 @model RealTimeChatSignalRLab.Pages.Chat.UserChatMessagesModel
 @{
 }
-@*<h4>User Chat</h4>
+<h4>Group Chat</h4>
 
 <div class="btn btn-primary mt-3" onclick="viewmore()">View More</div>
-<ul id="message-group-list" class="list-group mt-3">
+<ul id="message-user-list" class="list-group mt-3">
     @foreach (var message in Model.Messages.OrderBy(x => x.Item2.SendTime))
     {
         var vietnamTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
         var dateTime = new DateTime(message.Item2.SendTime);
         var vietnamDateTime = TimeZoneInfo.ConvertTimeFromUtc(dateTime, vietnamTimeZone);
 
-            <li class="list-group-item">
-                <div class="btn float-start">@message.Item1.Fullname</div>
-                <div class="btn float-start">@message.Item2.Content</div>
-                <div class="btn float-end">@(vietnamDateTime.ToString("HH:mm:ss dd/MM/yyyy"))</div>
-            </li>
+        <li class="list-group-item">
+            <div class="btn float-start">@message.Item1.Fullname</div>
+            <div class="btn float-start">@message.Item2.Content</div>
+            <div class="btn float-end">@(vietnamDateTime.ToString("HH:mm:ss dd/MM/yyyy"))</div>
+        </li>
     }
 </ul>
 <div>
     <textarea id="message-content" class="form-control" rows="5"></textarea>
     <div id="send-btn" class="btn btn-primary mt-2">Send</div>
-</div>*@
+</div>
+<script>
+    const options = {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+    };
+
+    var connection = new signalR.HubConnectionBuilder().withUrl("/chat").build();
+    connection.start().then(function () {
+        connection.invoke("SeenUserMessage", '@Model.Id').catch(function (err) {
+            return console.error(err.toString());
+        });
+    }).catch(function (err) {
+        console.error(error.toString())
+    });
+
+    connection.on("UserSendMessage", function (message, user) {
+        pushNewMessageToEnd(message, user);
+    });
+
+    connection.on("UserRecieveMessage", function (message, user) {
+        pushNewMessageToEnd(message, user);
+        seenMessage();
+    });
+
+    function pushNewMessageToEnd(message, user) {
+        let li = document.createElement('li');
+        li.classList.add('list-group-item');
+
+        let div1 = document.createElement('div');
+        div1.classList.add('btn', 'float-start');
+        div1.textContent = user.fullname;
+
+        let div2 = document.createElement('div');
+        div2.classList.add('btn', 'float-start');
+        div2.textContent = message.content;
+
+        const date = new Date(message.sendTime / 10000 - 62135596800000);
+        let div3 = document.createElement('div');
+        div3.classList.add('btn', 'float-end');
+        div3.textContent = date.toLocaleString('vi-VN', options);
+
+        li.appendChild(div1);
+        li.appendChild(div2);
+        li.appendChild(div3);
+
+        let container = document.getElementById('message-user-list');
+        container.appendChild(li);
+    }
+
+    document.getElementById("send-btn").addEventListener("click", function (event) {
+        const messageElm = document.getElementById("message-content");
+        const message = messageElm.value;
+        if (message.trim().length == 0) {
+            return;
+        }
+        messageElm.value = '';
+        connection.invoke("SendMessageToUser", '@Model.Id', message).catch(function (err) {
+            return console.error(err.toString());
+        });
+        event.preventDefault();
+    });
+
+    function seenMessage() {
+        connection.invoke("SeenUserMessage", '@Model.Id').catch(function (err) {
+            return console.error(err.toString());
+        });
+    }
+</script>

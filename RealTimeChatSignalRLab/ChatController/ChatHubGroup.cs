@@ -37,7 +37,7 @@ namespace RealTimeChatSignalRLab.ChatController
             await Task.WhenAll(addToDTBTask, sendTask);
         }
 
-        public async Task SeenMessage(Guid groupId)
+        public async Task SeenGroupMessage(Guid groupId)
         {
             var senderId = Context.UserIdentifier;
             if (string.IsNullOrWhiteSpace(senderId)) return;

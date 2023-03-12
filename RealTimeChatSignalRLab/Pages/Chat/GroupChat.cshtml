@@ -13,7 +13,7 @@
     {
         <li id="@usergroup.Item1.Id" class="list-group-item">
             <a class="float-start btn" href="/groups/@usergroup.Item1.Id/chat">@(usergroup.Item1.Name):</a>
-            <input class="float-end mt-2" type="radio" @(usergroup.Item3 ? "checked" : "") />
+            <input class="float-end mt-2" type="radio" disabled="disabled" @(usergroup.Item3 ? "checked" : "") />
             @if (usergroup.Item2 != null)
             {
                 var vietnamTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
@@ -71,7 +71,8 @@
         let input = document.createElement('input');
         input.classList.add('float-end', 'mt-2');
         input.setAttribute('type', 'radio');
-        input.setAttribute('checked', '');
+        input.setAttribute('disabled', 'disabled');
+        input.setAttribute('checked', 'checked');
 
         const date = new Date(message.sendTime / 10000 - 62135596800000);
         let div2 = document.createElement('div');

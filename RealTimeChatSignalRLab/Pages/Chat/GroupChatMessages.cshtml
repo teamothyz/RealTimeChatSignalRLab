@@ -41,7 +41,7 @@
 
     var connection = new signalR.HubConnectionBuilder().withUrl("/chat").build();
     connection.start().then(function () {
-        connection.invoke("SeenMessage", '@Model.Id').catch(function (err) {
+        connection.invoke("SeenGroupMessage", '@Model.Id').catch(function (err) {
             return console.error(err.toString());
         });
     }).catch(function (err) {
@@ -49,11 +49,11 @@
     });
 
     connection.on("GroupMessage", function (message, group, username) {
-        pushGroupToTop(message, group, username);
+        pushNewMessageToEnd(message, group, username);
         seenMessage();
     });
 
-    function pushGroupToTop(message, group, username) {
+    function pushNewMessageToEnd(message, group, username) {
         let li = document.createElement('li');
         li.classList.add('list-group-item');
 
@@ -81,6 +81,9 @@
     document.getElementById("send-btn").addEventListener("click", function (event) {
         const messageElm = document.getElementById("message-content");
         const message = messageElm.value;
+        if (message.trim().length == 0) {
+            return;
+        }
         messageElm.value = '';
         connection.invoke("SendMessageToGroup", '@Model.Id', message).catch(function (err) {
             return console.error(err.toString());
@@ -99,7 +102,7 @@
     });
 
     function seenMessage() {
-        connection.invoke("SeenMessage", '@Model.Id').catch(function (err) {
+        connection.invoke("SeenGroupMessage", '@Model.Id').catch(function (err) {
             return console.error(err.toString());
         });
     }

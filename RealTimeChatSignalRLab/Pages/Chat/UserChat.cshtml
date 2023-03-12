@@ -1,9 +1,9 @@
-﻿@page "users/{pageIndex:int?}"
+﻿@page "/users/{pageIndex:int?}"
 @model RealTimeChatSignalRLab.Pages.Chat.UserChatModel
 @{
 }
 
-<form class="d-flex flex-row" asp-page="/Chat/UserChatMessages" asp-page-handler="Create" method="post">
+<form class="d-flex flex-row" asp-page="/Chat/UserChat" asp-page-handler="NewChat" method="post">
     <div class="w-auto mt-1 mx-3">Email: </div>
     <input class="form-control w-auto" name="email" type="email" required />
     <input class="form-control btn-primary w-auto mx-3" type="submit" value="New Chat" />
@@ -13,8 +13,8 @@
     @foreach (var user in Model.Users)
     {
         <li id="@user.Item1.Id" class="list-group-item">
-            <a class="float-start btn" href="/groups/@user.Item1.Id/chat">@(user.Item1.Fullname):</a>
-            <input class="float-end mt-2" type="radio" @(user.Item3 ? "checked" : "") />
+            <a class="float-start btn" href="/users/@user.Item1.Id/chat">@(user.Item1.Fullname):</a>
+            <input class="float-end mt-2" type="radio" disabled="disabled" @(user.Item3 ? "checked" : "") />
             @if (user.Item2 != null)
             {
                 var vietnamTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
@@ -52,7 +52,7 @@
         pushMessageToTop(message, reciever, false);
     });
 
-    connection.on("UserSeenMessage", function (senderId) {
+    connection.on("SeenUserMessage", function (senderId) {
         let li = document.getElementById(senderId.toString());
         if (li) {
             let input = li.getElementsByTagName('input')[0];
@@ -77,8 +77,9 @@
         let input = document.createElement('input');
         input.classList.add('float-end', 'mt-2');
         input.setAttribute('type', 'radio');
+        input.setAttribute('disabled', 'disabled');
         if (isRecieved) {
-            input.setAttribute('checked', '');
+            input.setAttribute('checked', 'checked');
         }
 
         const date = new Date(message.sendTime / 10000 - 62135596800000);
