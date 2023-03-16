@@ -1,10 +1,13 @@
 ﻿@page "/users/{id:Guid}/chat"
 @model RealTimeChatSignalRLab.Pages.Chat.UserChatMessagesModel
 @{
+    ViewData["Title"] = "User Chat";
 }
-<h4>Group Chat</h4>
+<h4>@Model.Participant?.Fullname</h4>
+@Html.AntiForgeryToken()
 
 <div class="btn btn-primary mt-3" onclick="viewmore()">View More</div>
+
 <ul id="message-user-list" class="list-group mt-3">
     @foreach (var message in Model.Messages.OrderBy(x => x.Item2.SendTime))
     {
@@ -19,21 +22,13 @@
         </li>
     }
 </ul>
+
 <div>
     <textarea id="message-content" class="form-control" rows="5"></textarea>
     <div id="send-btn" class="btn btn-primary mt-2">Send</div>
 </div>
-<script>
-    const options = {
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-    };
 
-    var connection = new signalR.HubConnectionBuilder().withUrl("/chat").build();
+<script>
     connection.start().then(function () {
         connection.invoke("SeenUserMessage", '@Model.Id').catch(function (err) {
             return console.error(err.toString());
@@ -43,15 +38,15 @@
     });
 
     connection.on("UserSendMessage", function (message, user) {
-        pushNewMessageToEnd(message, user);
+        pushNewMessage(message, user, true);
     });
 
     connection.on("UserRecieveMessage", function (message, user) {
-        pushNewMessageToEnd(message, user);
+        pushNewMessage(message, user, true);
         seenMessage();
     });
 
-    function pushNewMessageToEnd(message, user) {
+    function pushNewMessage(message, user, toTheEnd) {
         let li = document.createElement('li');
         li.classList.add('list-group-item');
 
@@ -73,7 +68,11 @@
         li.appendChild(div3);
 
         let container = document.getElementById('message-user-list');
-        container.appendChild(li);
+        if (toTheEnd) {
+            container.appendChild(li);
+            return;
+        }
+        container.insertBefore(li, container.firstChild);
     }
 
     document.getElementById("send-btn").addEventListener("click", function (event) {
@@ -93,5 +92,27 @@
         connection.invoke("SeenUserMessage", '@Model.Id').catch(function (err) {
             return console.error(err.toString());
         });
+    }
+
+    let pageIndex = 2;
+    const offsetTime = @Model.Messages.Max(mess => mess.Item2.SendTime);
+    function viewmore() {
+        const url = '@Url.Page("/Chat/UserChatMessages", new {Id = Model.Id})';
+        let data = `index=${pageIndex}`;
+        if (offsetTime && offsetTime > 0) {
+            data += `&offsetTime=${offsetTime}`;
+        }
+        send(url, data, ajaxCallBack);
+    }
+
+    function ajaxCallBack(data) {
+        var jsonData = JSON.parse(data);
+        console.log(jsonData);
+        if (jsonData.length > 0) {
+            pageIndex++;
+            jsonData.forEach(function (message) {
+                pushNewMessage(message.item2, message.item1, false);
+            });
+        }
     }
 </script>

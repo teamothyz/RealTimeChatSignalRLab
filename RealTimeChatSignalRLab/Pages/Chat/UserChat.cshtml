@@ -1,7 +1,10 @@
 ﻿@page "/users/{pageIndex:int?}"
 @model RealTimeChatSignalRLab.Pages.Chat.UserChatModel
 @{
+    ViewData["Title"] = "Users";
 }
+<h4>Users Chat</h4>
+@Html.AntiForgeryToken()
 
 <form class="d-flex flex-row" asp-page="/Chat/UserChat" asp-page-handler="NewChat" method="post">
     <div class="w-auto mt-1 mx-3">Email: </div>
@@ -27,29 +30,22 @@
         </li>
     }
 </ul>
-<script>
-    const options = {
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-    };
 
-    var connection = new signalR.HubConnectionBuilder().withUrl("/chat").build();
+<div class="btn btn-primary mt-3" onclick="viewmore()">View More</div>
+
+<script>
     connection.start().catch(function (err) {
         console.error(error.toString())
     });
 
     connection.on("UserRecieveMessage", function (message, sender) {
         console.log(message, sender);
-        pushMessageToTop(message, sender, true);
+        pushMessage(message, sender, true, true);
     });
 
     connection.on("UserSendMessage", function (message, reciever) {
         console.log(message, reciever);
-        pushMessageToTop(message, reciever, false);
+        pushMessage(message, reciever, false, true);
     });
 
     connection.on("SeenUserMessage", function (senderId) {
@@ -60,7 +56,7 @@
         }
     });
 
-    function pushMessageToTop(message, user, isRecieved) {
+    function pushMessage(message, user, isRecieved, toTheTop) {
         let li = document.createElement('li');
         li.classList.add('list-group-item');
         li.setAttribute('id', user.id.toString());
@@ -68,7 +64,7 @@
         let a = document.createElement('a');
         a.classList.add('float-start', 'btn');
         a.setAttribute('href', `/users/${user.id}/chat`);
-        a.textContent = user.fullname;
+        a.textContent = `${user.fullname}: `;
 
         let div1 = document.createElement('div');
         div1.classList.add('float-start', 'btn');
@@ -97,11 +93,35 @@
         if (existedLi) {
             container.removeChild(existedLi);
         }
-        if (container.children.length > 0) {
+        if (toTheTop) {
             container.insertBefore(li, container.firstChild);
+            return;
         }
-        else {
-            container.appendChild(li);
+        container.appendChild(li);
+    }
+
+    let offsetTime = @Model.Users.Min(mess => mess?.Item2?.SendTime ?? 0);
+    function viewmore() {
+        if (offsetTime && offsetTime > 0) {
+            const url = '@Url.Page("/Chat/UserChat")';
+            const data = `offsetTime=${offsetTime}`;
+            send(url, data, ajaxCallBack);
+        }
+    }
+
+    function ajaxCallBack(data) {
+        var jsonData = JSON.parse(data);
+        console.log(jsonData);
+        if (jsonData.length > 0) {
+            offsetTime = jsonData.reduce((min, user) => {
+                if (user.item2) {
+                    return user.item2.sendTime < min ? user.item2.sendTime : min
+                }
+                return min;
+            }, offsetTime);
+            jsonData.forEach(function (user) {
+                pushMessage(user.item2, user.item1, user.item3, false);
+            });
         }
     }
 </script>

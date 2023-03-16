@@ -1,7 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using RealTimeChatSignalRLab.Intentions;
 using RealTimeChatSignalRLab.Models;
-using RealTimeChatSignalRLab.Pagination;
 
 namespace RealTimeChatSignalRLab.Repositories
 {
@@ -52,8 +51,9 @@ namespace RealTimeChatSignalRLab.Repositories
             return await dbcontext.UserGroups.AnyAsync(g => g.UserId == userId && g.GroupId == groupId);
         }
 
-        public async Task<PaginatedList<Tuple<Group, Message, bool>>> GetGroupsByUserId(int pageIndex, Guid userId)
+        public async Task<List<Tuple<Group, Message?, bool>>> GetGroupsByUserId(Guid userId, long? offsetTime)
         {
+            offsetTime ??= DateTime.UtcNow.AddTicks(1).Ticks;
             var query = from grUser in dbcontext.UserGroups
                         join gr in dbcontext.Groups on grUser.GroupId equals gr.Id
 
@@ -62,30 +62,31 @@ namespace RealTimeChatSignalRLab.Repositories
                         equals new { id = message.Reciever, type = message.RecieverType }
                         into messageJoin
                         from message in messageJoin.DefaultIfEmpty()
-
                         where grUser.UserId == userId
                         group new { gr, message } by gr.Id into g
 
                         select g.OrderByDescending(x => (x.message != null ? x.message.SendTime : 0))
                         .Select(x => Tuple.Create(x.gr, x.message)).First();
             var groupAndLastMessages = await query.ToListAsync();
-            var groups = groupAndLastMessages.OrderByDescending(x => x.Item2?.SendTime ?? 0)
-                .Skip((pageIndex - 1) * 10).Take(10);
-            var groupsWithUnread = new List<Tuple<Group, Message, bool>>();
+            var groups = groupAndLastMessages
+                .Where(gr => (gr.Item2?.SendTime ?? 0) <= offsetTime)
+                .OrderByDescending(gr => gr.Item2?.SendTime ?? 0)
+                .Take(5);
+            var groupsWithUnread = new List<Tuple<Group, Message?, bool>>();
             foreach (var group in groups)
             {
                 var isUnread = await CheckUnreadGroupMessage(userId, group.Item1.Id);
-                groupsWithUnread.Add(Tuple.Create(group.Item1, group.Item2, isUnread));
+                groupsWithUnread.Add(Tuple.Create<Group, Message?, bool>(group.Item1, group.Item2, isUnread));
             }
-            return new PaginatedList<Tuple<Group, Message, bool>>(groupsWithUnread, groupAndLastMessages.Count, pageIndex, 10);
+            return groupsWithUnread;
         }
 
         public async Task<List<Group>> GetAllGroupsByUserId(Guid userId)
         {
             var query = (from grUser in dbcontext.UserGroups
-                        join gr in dbcontext.Groups on grUser.GroupId equals gr.Id
-                        where grUser.UserId == userId
-                        select gr).Distinct();
+                         join gr in dbcontext.Groups on grUser.GroupId equals gr.Id
+                         where grUser.UserId == userId
+                         select gr).Distinct();
             return await query.ToListAsync();
         }
 
@@ -105,7 +106,7 @@ namespace RealTimeChatSignalRLab.Repositories
             return lastSeenTime < lastRecieveTime;
         }
 
-        public async Task<PaginatedList<User>> GetGroupUsersByGroupId(int pageIndex, Guid userId, Guid groupId)
+        public async Task<List<User>> GetGroupUsersByGroupId(int pageIndex, Guid userId, Guid groupId)
         {
             var joined = await CheckJoining(userId, groupId);
             if (!joined) throw new Exception("User does not join this group");
@@ -113,8 +114,8 @@ namespace RealTimeChatSignalRLab.Repositories
             var query = (from grUser in dbcontext.UserGroups
                          join user in dbcontext.Users on grUser.UserId equals user.Id
                          where grUser.GroupId == groupId
-                         select user).Distinct();
-            return await PaginatedList<User>.CreateAsync(query, pageIndex, 10);
+                         select user).Distinct().OrderBy(user => user.Fullname);
+            return await query.Skip((pageIndex - 1) * 10).Take(10).ToListAsync();
         }
 
         public async Task UpdateReadMessageTime(Guid userId, Guid groupId)

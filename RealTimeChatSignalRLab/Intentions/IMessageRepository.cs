@@ -5,10 +5,10 @@ namespace RealTimeChatSignalRLab.Intentions
 {
     public interface IMessageRepository
     {
-        Task<PaginatedList<Tuple<User, Message>>> GetUserMessages(int pageIndex, Guid userId1, Guid userId2);
-        Task<PaginatedList<Tuple<User, Message>>> GetGroupMessages(int pageIndex, Guid userId, Guid groupId);
+        Task<List<Tuple<User, Message>>> GetUserMessages(int pageIndex, Guid userId1, Guid userId2, long? offsetTime);
+        Task<List<Tuple<User, Message>>> GetGroupMessages(int pageIndex, Guid userId, Guid groupId, long? offsetTime);
         Task Send(Message message);
-        Task<PaginatedList<Tuple<User, Message?, bool>>> GetUserChat(int pageIndex, Guid userId);
+        Task<List<Tuple<User, Message?, bool>>> GetUserChat(Guid userId, long? offsetTime);
         Task ReadMessage(Guid sender, Guid reciever);
     }
 }

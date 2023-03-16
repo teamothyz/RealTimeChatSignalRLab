@@ -1,8 +1,10 @@
 ﻿@page "/groups/{id:Guid}/chat"
 @model RealTimeChatSignalRLab.Pages.Chat.GroupChatMessagesModel
 @{
+    ViewData["Title"] = "Group Chat";
 }
-<h4>Group Chat</h4>
+@Html.AntiForgeryToken()
+<h4>@Model.Group.Name</h4>
 <a class="btn btn-primary mt-3" href="#">View Member</a>
 
 <div class="mt-1">
@@ -30,16 +32,6 @@
     <div id="send-btn" class="btn btn-primary mt-2">Send</div>
 </div>
 <script>
-    const options = {
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-    };
-
-    var connection = new signalR.HubConnectionBuilder().withUrl("/chat").build();
     connection.start().then(function () {
         connection.invoke("SeenGroupMessage", '@Model.Id').catch(function (err) {
             return console.error(err.toString());
@@ -49,11 +41,11 @@
     });
 
     connection.on("GroupMessage", function (message, group, username) {
-        pushNewMessageToEnd(message, group, username);
+        pushNewMessage(message, group, username, true);
         seenMessage();
     });
 
-    function pushNewMessageToEnd(message, group, username) {
+    function pushNewMessage(message, group, username, toTheEnd) {
         let li = document.createElement('li');
         li.classList.add('list-group-item');
 
@@ -75,7 +67,11 @@
         li.appendChild(div3);
 
         let container = document.getElementById('message-group-list');
-        container.appendChild(li);
+        if (toTheEnd) {
+            container.appendChild(li);
+            return;
+        }
+        container.insertBefore(li, container.firstChild);
     }
 
     document.getElementById("send-btn").addEventListener("click", function (event) {
@@ -105,5 +101,27 @@
         connection.invoke("SeenGroupMessage", '@Model.Id').catch(function (err) {
             return console.error(err.toString());
         });
+    }
+
+    let pageIndex = 2;
+    const offsetTime = @Model.Messages.Max(mess => mess.Item2.SendTime);
+    function viewmore() {
+        const url = '@Url.Page("/Chat/GroupChatMessages", new {Id = Model.Id})';
+        let data = `index=${pageIndex}`;
+        if (offsetTime && offsetTime > 0) {
+            data += `&offsetTime=${offsetTime}`;
+        }
+        send(url, data, ajaxCallBack);
+    }
+
+    function ajaxCallBack(data) {
+        var jsonData = JSON.parse(data);
+        console.log(jsonData);
+        if (jsonData.length > 0) {
+            pageIndex++;
+            jsonData.forEach(function (message) {
+                pushNewMessage(message.item2, null, message.item1.fullname, false);
+            });
+        }
     }
 </script>

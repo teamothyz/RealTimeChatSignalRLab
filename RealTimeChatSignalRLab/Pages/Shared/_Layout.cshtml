@@ -11,9 +11,8 @@
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="~/js/site.js" asp-append-version="true"></script>
     <script src="~/microsoft/signalr/dist/browser/signalr.js"></script>
-    <script src="@ViewData["ChatScript"]" asp-append-version="true"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
 </head>
 <body>
     <header>
@@ -35,6 +34,15 @@
                         <li class="nav-item">
                             <a class="nav-link text-dark" asp-page="/Chat/GroupChat">Groups</a>
                         </li>
+                        @if (User.Identity?.IsAuthenticated != true)
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-page="/Auth/Login">Login</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-page="/Auth/Register">Register</a>
+                            </li>
+                        }
                     </ul>
                 </div>
             </div>

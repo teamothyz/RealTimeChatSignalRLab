@@ -1,7 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using RealTimeChatSignalRLab.Intentions;
 using RealTimeChatSignalRLab.Models;
-using RealTimeChatSignalRLab.Pagination;
 
 namespace RealTimeChatSignalRLab.Repositories
 {
@@ -28,18 +27,9 @@ namespace RealTimeChatSignalRLab.Repositories
         {
             var query = from user in dbcontext.Users
                         where emails.Contains(user.Email)
+                        orderby user.Id
                         select user;
-            var users = new List<User>();
-            PaginatedList<User> userPage;
-            int index = 0;
-            do
-            {
-                index++;
-                userPage = await PaginatedList<User>.CreateAsync(query, index, 100);
-                users.AddRange(userPage);
-            }
-            while (userPage.HasNextPage);
-            return users;
+            return await query.ToListAsync();
         }
 
         public async Task<User?> SignIn(string email, string password)

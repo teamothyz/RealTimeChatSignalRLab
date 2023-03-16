@@ -2,10 +2,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 using RealTimeChatSignalRLab.Intentions;
 using RealTimeChatSignalRLab.Models;
-using RealTimeChatSignalRLab.Pagination;
-using RealTimeChatSignalRLab.Repositories;
 using System.Security.Claims;
 
 namespace RealTimeChatSignalRLab.Pages.Chat
@@ -21,7 +20,9 @@ namespace RealTimeChatSignalRLab.Pages.Chat
         [BindProperty(SupportsGet = true)]
         public Guid Id { get; set; }
 
-        public PaginatedList<Tuple<User, Message>> Messages { get; set; }
+        public User? Participant { get; set; }
+
+        public List<Tuple<User, Message>> Messages { get; set; }
 
         public UserChatMessagesModel(IGroupRepository groupRepository,
             IUserGroupRepository userGroupRepository,
@@ -37,15 +38,22 @@ namespace RealTimeChatSignalRLab.Pages.Chat
         public async Task<IActionResult> OnGetAsync()
         {
             var userId = User.Claims.First(claim => claim.Type == ClaimTypes.NameIdentifier).Value;
-            Messages = await messageRepository.GetUserMessages(1, Guid.Parse(userId), Id);
+            Participant = await userRepository.GetUserById(Id);
+            if (Participant == null)
+                return BadRequest();
+            Messages = await messageRepository.GetUserMessages(1, Guid.Parse(userId), Id, null);
             return Page();
         }
 
-        public async Task<ContentResult> OnPostAsync(int index)
+        public async Task<ContentResult> OnPostAsync(int index, long? offsetTime)
         {
             var userId = User.Claims.First(claim => claim.Type == ClaimTypes.NameIdentifier).Value;
-            var messages = await messageRepository.GetGroupMessages(index, Guid.Parse(userId), Id);
-            var content = JsonConvert.SerializeObject(messages);
+            var messages = await messageRepository.GetUserMessages(index, Guid.Parse(userId), Id, offsetTime);
+            var settings = new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            };
+            var content = JsonConvert.SerializeObject(messages, settings);
             return Content(content);
         }
     }

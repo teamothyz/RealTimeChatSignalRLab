@@ -1,9 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Newtonsoft.Json.Serialization;
+using Newtonsoft.Json;
 using RealTimeChatSignalRLab.Intentions;
 using RealTimeChatSignalRLab.Models;
-using RealTimeChatSignalRLab.Pagination;
 using System.Security.Claims;
 
 namespace RealTimeChatSignalRLab.Pages.Chat
@@ -14,13 +15,10 @@ namespace RealTimeChatSignalRLab.Pages.Chat
         private readonly IUserGroupRepository userGroupRepository;
         private readonly IGroupRepository groupRepository;
 
-        [BindProperty(SupportsGet = true)]
-        public int PageIndex { get; set; } = 1;
-
         [BindProperty]
         public string GroupName { get; set; }
 
-        public PaginatedList<Tuple<Group, Message, bool>> UserGroups { get; set; }
+        public List<Tuple<Group, Message?, bool>> UserGroups { get; set; }
 
         public GroupChatModel(IGroupRepository groupRepository, IUserGroupRepository userGroupRepository)
         {
@@ -31,8 +29,20 @@ namespace RealTimeChatSignalRLab.Pages.Chat
         public async Task<IActionResult> OnGetAsync()
         {
             var userId = User.Claims.First(claim => claim.Type == ClaimTypes.NameIdentifier).Value;
-            UserGroups = await userGroupRepository.GetGroupsByUserId(PageIndex, Guid.Parse(userId));
+            UserGroups = await userGroupRepository.GetGroupsByUserId(Guid.Parse(userId), null);
             return Page();
+        }
+
+        public async Task<ContentResult> OnPostAsync(long offsetTime)
+        {
+            var userId = User.Claims.First(claim => claim.Type == ClaimTypes.NameIdentifier).Value;
+            var userGroups = await userGroupRepository.GetGroupsByUserId(Guid.Parse(userId), offsetTime);
+            var settings = new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            };
+            var content = JsonConvert.SerializeObject(userGroups, settings);
+            return new ContentResult { Content = content };
         }
 
         public async Task<IActionResult> OnPostCreate()
@@ -45,7 +55,7 @@ namespace RealTimeChatSignalRLab.Pages.Chat
                 Owner = Guid.Parse(userId),
             };
             await groupRepository.Create(group);
-            return RedirectToPage("/Chat/GroupChat");
+            return RedirectToPage("/Chat/GroupChatMessages", new { group.Id });
         }
     }
 }

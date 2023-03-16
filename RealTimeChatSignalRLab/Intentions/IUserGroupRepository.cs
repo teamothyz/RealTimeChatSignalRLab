@@ -1,5 +1,4 @@
 ﻿using RealTimeChatSignalRLab.Models;
-using RealTimeChatSignalRLab.Pagination;
 
 namespace RealTimeChatSignalRLab.Intentions
 {
@@ -10,8 +9,8 @@ namespace RealTimeChatSignalRLab.Intentions
         Task<List<Group>> GetAllGroupsByUserId(Guid userId);
         Task<bool> CheckJoining(Guid userId, Guid groupId);
         Task<bool> CheckUnreadGroupMessage(Guid userId, Guid groupId);
-        Task<PaginatedList<User>> GetGroupUsersByGroupId(int pageIndex, Guid userId, Guid groupId);
-        Task<PaginatedList<Tuple<Group, Message, bool>>> GetGroupsByUserId(int pageIndex, Guid userId);
+        Task<List<User>> GetGroupUsersByGroupId(int pageIndex, Guid userId, Guid groupId);
+        Task<List<Tuple<Group, Message?, bool>>> GetGroupsByUserId(Guid userId, long? offsetTime);
         Task UpdateReadMessageTime(Guid userId, Guid groupId);
     }
 }

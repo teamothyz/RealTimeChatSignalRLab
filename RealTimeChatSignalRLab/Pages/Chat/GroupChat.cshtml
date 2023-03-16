@@ -1,7 +1,10 @@
 ﻿@page "/groups/{pageIndex:int?}"
 @model RealTimeChatSignalRLab.Pages.Chat.GroupChatModel
 @{
+    ViewData["Title"] = "Groups";
 }
+<h4>Groups Chat</h4>
+
 <form class="d-flex flex-row" asp-page="/Chat/GroupChat" asp-page-handler="Create" method="post">
     <div class="w-auto mt-1 mx-3">Group Name: </div>
     <input class="form-control w-auto" asp-for="GroupName" required/>
@@ -26,24 +29,14 @@
         </li>
     }
 </ul>
-
+<div class="btn btn-primary mt-3" onclick="viewmore()">View More</div>
 <script>
-    const options = {
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-    };
-
-    var connection = new signalR.HubConnectionBuilder().withUrl("/chat").build();
     connection.start().catch(function (err) {
-        console.error(error.toString())
+        console.error(error.toString());
     });
 
     connection.on("GroupMessage", function (message, group, username) {
-        pushGroupToTop(message, group);
+        pushGroup(message, group, true, true);
     });
 
     connection.on("GroupMessageSeen", function (groupId) {
@@ -54,7 +47,7 @@
         }
     });
 
-    function pushGroupToTop(message, group) {
+    function pushGroup(message, group, isUnread, toTheTop) {
         let li = document.createElement('li');
         li.classList.add('list-group-item');
         li.setAttribute('id', group.id);
@@ -72,7 +65,9 @@
         input.classList.add('float-end', 'mt-2');
         input.setAttribute('type', 'radio');
         input.setAttribute('disabled', 'disabled');
-        input.setAttribute('checked', 'checked');
+        if (isUnread) {
+            input.setAttribute('checked', 'checked');
+        }
 
         const date = new Date(message.sendTime / 10000 - 62135596800000);
         let div2 = document.createElement('div');
@@ -89,11 +84,35 @@
         if (existedLi) {
             container.removeChild(existedLi);
         }
-        if (container.children.length > 0) {
+        if (toTheTop) {
             container.insertBefore(li, container.firstChild);
+            return;
         }
-        else {
-            container.appendChild(li);
+        container.appendChild(li);
+    }
+
+    let offsetTime = @Model.UserGroups.Min(mess => mess.Item2.SendTime);
+    function viewmore() {
+        if (offsetTime && offsetTime > 0) {
+            const url = '@Url.Page("/Chat/GroupChat")';
+            const data = `offsetTime=${offsetTime}`;
+            send(url, data, ajaxCallBack);
+        }
+    }
+
+    function ajaxCallBack(data) {
+        var jsonData = JSON.parse(data);
+        console.log(jsonData);
+        if (jsonData.length > 0) {
+            offsetTime = jsonData.reduce((min, group) =>  {
+                if (group.item2) {
+                    return group.item2.sendTime < min ? group.item2.sendTime : min;
+                }
+                return min;
+            }, offsetTime);
+            jsonData.forEach(function (group) {
+                pushGroup(group.item2, group.item1, group.item3, false);
+            });
         }
     }
 </script>

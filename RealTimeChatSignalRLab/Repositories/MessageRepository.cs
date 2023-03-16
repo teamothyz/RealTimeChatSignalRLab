@@ -1,7 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using RealTimeChatSignalRLab.Intentions;
 using RealTimeChatSignalRLab.Models;
-using RealTimeChatSignalRLab.Pagination;
 
 namespace RealTimeChatSignalRLab.Repositories
 {
@@ -14,21 +13,25 @@ namespace RealTimeChatSignalRLab.Repositories
             dbcontext = context;
         }
 
-        public async Task<PaginatedList<Tuple<User, Message>>> GetGroupMessages(int pageIndex, Guid userId, Guid groupId)
+        public async Task<List<Tuple<User, Message>>> GetGroupMessages(int pageIndex, Guid userId, Guid groupId, long? offsetTime)
         {
+            offsetTime ??= DateTime.UtcNow.AddTicks(1).Ticks;
             var existed = await dbcontext.UserGroups.AnyAsync(g => g.UserId == userId && g.GroupId == groupId);
             if (!existed)
                 throw new Exception("The user does not join this group");
             var query = from message in dbcontext.Messages
                         join user in dbcontext.Users on message.Sender equals user.Id
-                        where message.Reciever == groupId && message.RecieverType == RecieverType.Group
+                        where message.Reciever == groupId 
+                        && message.RecieverType == RecieverType.Group
+                        && message.SendTime <= offsetTime
                         orderby message.SendTime descending
                         select Tuple.Create(user, message);
-            return await PaginatedList<Tuple<User, Message>>.CreateAsync(query, pageIndex, 10);
+            return await query.Skip((pageIndex - 1) * 10).Take(10).ToListAsync();
         }
 
-        public async Task<PaginatedList<Tuple<User, Message?, bool>>> GetUserChat(int pageIndex, Guid userId)
+        public async Task<List<Tuple<User, Message?, bool>>> GetUserChat(Guid userId, long? offsetTime)
         {
+            offsetTime ??= DateTime.UtcNow.AddTicks(1).Ticks;
             var query = from message in dbcontext.Messages
                         join sender in dbcontext.Users on message.Sender equals sender.Id
                         join reciever in dbcontext.Users on message.Reciever equals reciever.Id
@@ -36,14 +39,17 @@ namespace RealTimeChatSignalRLab.Repositories
                         let id1 = sender.Id.CompareTo(reciever.Id) < 0 ? sender.Id : reciever.Id
                         let id2 = sender.Id.CompareTo(reciever.Id) < 0 ? reciever.Id : sender.Id
 
-                        where (sender.Id == userId || reciever.Id == userId) && message.RecieverType == RecieverType.User
+                        where (sender.Id == userId || reciever.Id == userId) 
+                        && message.RecieverType == RecieverType.User
 
                         group new { sender, reciever, message } by new { id1, id2 } into messageGroup
                         select messageGroup.OrderByDescending(x => x.message.SendTime)
                         .Select(x => Tuple.Create(x.sender, x.reciever, x.message)).First();
 
-            var messagesInfo = (await query.ToListAsync()).OrderByDescending(info => info.Item3.SendTime)
-                .Skip((pageIndex - 1) * 10).Take(10);
+            var messagesInfo = (await query.ToListAsync())
+                .Where(user => (user.Item3?.SendTime ?? 0) <= offsetTime)
+                .OrderByDescending(info => info.Item3.SendTime)
+                .Take(5);
             var users = new List<Tuple<User, Message?, bool>>();
             foreach (var info in messagesInfo)
             {
@@ -54,18 +60,21 @@ namespace RealTimeChatSignalRLab.Repositories
                 else
                     users.Add(Tuple.Create(info.Item2, lastMessage, isUnread));
             }
-            return new PaginatedList<Tuple<User, Message?, bool>>(users, query.Count(), pageIndex, 10);
+            return users;
         }
 
-        public async Task<PaginatedList<Tuple<User, Message>>> GetUserMessages(int pageIndex, Guid userId1, Guid userId2)
+        public async Task<List<Tuple<User, Message>>> GetUserMessages(int pageIndex, Guid userId1, Guid userId2, long? offsetTime)
         {
+            offsetTime ??= DateTime.UtcNow.AddTicks(1).Ticks;
             var query = from message in dbcontext.Messages
                         join sender in dbcontext.Users on message.Sender equals sender.Id
                         join reciever in dbcontext.Users on message.Reciever equals reciever.Id
-                        where (message.Sender == userId1 && message.Reciever == userId2) || (message.Sender == userId2 && message.Reciever == userId1)
+                        where ((message.Sender == userId1 && message.Reciever == userId2) 
+                        || (message.Sender == userId2 && message.Reciever == userId1))
+                        && message.SendTime <= offsetTime
                         orderby message.SendTime descending
                         select Tuple.Create(sender, message);
-            return await PaginatedList<Tuple<User, Message>>.CreateAsync(query, pageIndex, 10);
+            return await query.Skip((pageIndex - 1) * 10).Take(10).ToListAsync();
         }
 
         public async Task Send(Message message)
