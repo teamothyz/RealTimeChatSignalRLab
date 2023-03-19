@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.SignalR;
 using RealTimeChatSignalRLab.Models;
+using System.Reflection;
 
 namespace RealTimeChatSignalRLab.ChatController
 {
@@ -58,6 +59,46 @@ namespace RealTimeChatSignalRLab.ChatController
             await _userGroupRepository.AddGroupUsers(groupId, Guid.Parse(ownerId), users.Select(user => user.Id).ToList());
             users.ForEach(user => tasks.Add(AddToGroup(user.Id.ToString(), groupId)));
             await Task.WhenAll(tasks);
+            var group = await _groupRepository.GetGroup(groupId);
+            var message = await _messageRepository.GetLastMessage(groupId);
+            await Clients.Users(users.Select(user => user.Id.ToString())).SendAsync("GroupMessage", message, group, null);
+        }
+
+        public async Task RemoveMemberFromGroup(Guid userId, Guid groupId)
+        {
+            var ownerId = Context.UserIdentifier;
+            if (ownerId == null) return;
+            await _userGroupRepository.DeleteGroupUsers(groupId, Guid.Parse(ownerId), new List<Guid> { userId }, false);
+            await RemoveFromGroup(userId, groupId);
+            await Clients.User(userId.ToString()).SendAsync("RemoveGroupUser", "success", groupId);
+            await Clients.Group(groupId.ToString()).SendAsync("AMemberWasRemoved", userId, groupId);
+        }
+
+        public async Task LeaveGroup(Guid groupId)
+        {
+            var userIdString = Context.UserIdentifier;
+            if (userIdString == null) return;
+            var userId = Guid.Parse(userIdString);
+            await _userGroupRepository.DeleteGroupUsers(groupId, userId, new List<Guid> { userId }, true);
+            await RemoveFromGroup(userId, groupId);
+            await Clients.User(userId.ToString()).SendAsync("RemoveGroupUser", "success", groupId);
+            await Clients.Group(groupId.ToString()).SendAsync("AMemberWasRemoved", userId, groupId);
+        }
+
+        public async Task DeleteGroup(Guid groupId)
+        {
+            var ownerId = Context.UserIdentifier;
+            if (ownerId == null) return;
+            var groupUsers = await _userGroupRepository.GetGroupUsersByGroupId(null, Guid.Parse(ownerId), groupId);
+            var uIDs = groupUsers.Select(user => user.Id).ToList();
+            await _userGroupRepository.DeleteGroupUsers(groupId, Guid.Parse(ownerId), uIDs, false);
+            await _groupRepository.DeleteGroup(Guid.Parse(ownerId), groupId);
+            uIDs.ForEach(async (id) =>
+            {
+                await RemoveFromGroup(id, groupId);
+                await Clients.User(id.ToString()).SendAsync("RemoveGroupUser", "success", groupId);
+                await Clients.Group(groupId.ToString()).SendAsync("AMemberWasRemoved", id, groupId);
+            });
         }
 
         private async Task AddToGroup(string userId, Guid groupId)
@@ -68,10 +109,10 @@ namespace RealTimeChatSignalRLab.ChatController
             await Task.WhenAll(tasks);
         }
 
-        private async Task RemoveFromGroup(string userId, Guid groupId)
+        private async Task RemoveFromGroup(Guid userId, Guid groupId)
         {
             var tasks = new List<Task>();
-            var connections = UserHandler.GetConnection(userId);
+            var connections = UserHandler.GetConnection(userId.ToString());
             connections.ForEach(connectionId => { tasks.Add(Groups.RemoveFromGroupAsync(connectionId, groupId.ToString())); });
             await Task.WhenAll(tasks);
         }

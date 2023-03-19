@@ -40,5 +40,19 @@ namespace RealTimeChatSignalRLab.ChatController
             var sendTask = Clients.User(recieverId).SendAsync("SeenUserMessage", senderId);
             await Task.WhenAll(readTask, sendTask);
         }
+
+        public async Task OnlineNotify()
+        {
+            var userId = Context.UserIdentifier;
+            if (string.IsNullOrWhiteSpace(userId)) return;
+            await Clients.All.SendAsync("UserOnline", userId);
+        }
+
+        public async Task OfflineNotify()
+        {
+            var userId = Context.UserIdentifier;
+            if (string.IsNullOrWhiteSpace(userId)) return;
+            await Clients.All.SendAsync("UserOffline", userId);
+        }
     }
 }

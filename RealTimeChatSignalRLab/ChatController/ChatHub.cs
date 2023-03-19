@@ -28,15 +28,17 @@ namespace RealTimeChatSignalRLab.ChatController
             {
                 UserHandler.AddNewConnection(Context.UserIdentifier, Context.ConnectionId);
                 await InitGroups();
+                await OnlineNotify();
             }
             return base.OnConnectedAsync();
         }
 
-        public override Task OnDisconnectedAsync(Exception? exception)
+        public override async Task<Task> OnDisconnectedAsync(Exception? exception)
         {
             if (Context.UserIdentifier != null)
             {
                 UserHandler.RemoveConnection(Context.UserIdentifier, Context.ConnectionId);
+                await OfflineNotify();
             }
             return base.OnDisconnectedAsync(exception);
         }

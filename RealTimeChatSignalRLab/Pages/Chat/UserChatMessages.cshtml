@@ -34,7 +34,7 @@
             return console.error(err.toString());
         });
     }).catch(function (err) {
-        console.error(error.toString())
+        console.error(err.toString())
     });
 
     connection.on("UserSendMessage", function (message, user) {
@@ -95,7 +95,7 @@
     }
 
     let pageIndex = 2;
-    const offsetTime = @Model.Messages.Max(mess => mess.Item2.SendTime);
+    const offsetTime = @(Model.Messages.Max(mess => mess.Item2?.SendTime) ?? 0);
     function viewmore() {
         const url = '@Url.Page("/Chat/UserChatMessages", new {Id = Model.Id})';
         let data = `index=${pageIndex}`;

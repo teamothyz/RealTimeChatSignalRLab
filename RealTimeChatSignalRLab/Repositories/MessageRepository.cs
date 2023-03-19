@@ -98,11 +98,11 @@ namespace RealTimeChatSignalRLab.Repositories
             }
         }
 
-        private async Task<Message?> GetLastMessage(Guid userId1, Guid userId2)
+        public async Task<Message?> GetLastMessage(Guid groupId)
         {
             var query = from message in dbcontext.Messages
-                        where (message.Reciever == userId1 && message.Sender == userId2)
-                        || (message.Reciever == userId2 && message.Sender == userId1)
+                        where (message.Reciever == groupId)
+                        && (message.RecieverType == RecieverType.Group)
                         orderby message.SendTime descending
                         select message;
             return await query.FirstOrDefaultAsync();

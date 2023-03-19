@@ -32,7 +32,7 @@
 <div class="btn btn-primary mt-3" onclick="viewmore()">View More</div>
 <script>
     connection.start().catch(function (err) {
-        console.error(error.toString());
+        console.error(err.toString());
     });
 
     connection.on("GroupMessage", function (message, group, username) {
@@ -44,6 +44,14 @@
         if (li) {
             let input = li.getElementsByTagName('input')[0];
             input.removeAttribute('checked');
+        }
+    });
+
+    connection.on("RemoveGroupUser", function (result, groupId) {
+        let li = document.getElementById(groupId.toString());
+        let container = document.getElementById('group-list');
+        if (container.contains(li)) {
+            container.removeChild(li);
         }
     });
 
@@ -91,7 +99,7 @@
         container.appendChild(li);
     }
 
-    let offsetTime = @Model.UserGroups.Min(mess => mess.Item2.SendTime);
+    let offsetTime = @(Model.UserGroups.Min(mess => mess.Item2?.SendTime) ?? 0);
     function viewmore() {
         if (offsetTime && offsetTime > 0) {
             const url = '@Url.Page("/Chat/GroupChat")';

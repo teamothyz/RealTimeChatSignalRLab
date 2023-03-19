@@ -34,11 +34,17 @@ namespace RealTimeChatSignalRLab.Repositories
             await dbcontext.SaveChangesAsync();
         }
 
-        public async Task DeleteGroupUsers(Guid groupId, Guid ownerId, List<Guid> userIds)
+        public async Task DeleteGroupUsers(Guid groupId, Guid actionUserId, List<Guid> userIds, bool isLeave)
         {
-            var owned = await dbcontext.Groups.AnyAsync(g => g.Id == groupId && g.Owner == ownerId);
-            if (!owned) throw new Exception("User is not the owner of this group");
-
+            if (!isLeave)
+            {
+                var owned = await dbcontext.Groups.AnyAsync(g => g.Id == groupId && g.Owner == actionUserId);
+                if (!owned) throw new Exception("User is not the owner of this group");
+            }
+            else
+            {
+                if (userIds.Count > 1 || !userIds.Any(id => id == actionUserId)) throw new Exception("Can't leave");
+            }
             var userGroups = await dbcontext.UserGroups
                 .Where(g => g.GroupId == groupId && userIds.Contains(g.UserId))
                 .ToListAsync();
@@ -106,7 +112,7 @@ namespace RealTimeChatSignalRLab.Repositories
             return lastSeenTime < lastRecieveTime;
         }
 
-        public async Task<List<User>> GetGroupUsersByGroupId(int pageIndex, Guid userId, Guid groupId)
+        public async Task<List<User>> GetGroupUsersByGroupId(int? pageIndex, Guid userId, Guid groupId)
         {
             var joined = await CheckJoining(userId, groupId);
             if (!joined) throw new Exception("User does not join this group");
@@ -115,7 +121,8 @@ namespace RealTimeChatSignalRLab.Repositories
                          join user in dbcontext.Users on grUser.UserId equals user.Id
                          where grUser.GroupId == groupId
                          select user).Distinct().OrderBy(user => user.Fullname);
-            return await query.Skip((pageIndex - 1) * 10).Take(10).ToListAsync();
+            if (pageIndex == null) return await query.ToListAsync();
+            return await query.Skip((pageIndex.Value - 1) * 10).Take(10).ToListAsync();
         }
 
         public async Task UpdateReadMessageTime(Guid userId, Guid groupId)

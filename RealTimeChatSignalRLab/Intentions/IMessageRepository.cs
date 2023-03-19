@@ -10,5 +10,6 @@ namespace RealTimeChatSignalRLab.Intentions
         Task Send(Message message);
         Task<List<Tuple<User, Message?, bool>>> GetUserChat(Guid userId, long? offsetTime);
         Task ReadMessage(Guid sender, Guid reciever);
+        Task<Message?> GetLastMessage(Guid groupId);
     }
 }

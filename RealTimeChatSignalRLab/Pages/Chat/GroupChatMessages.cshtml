@@ -5,7 +5,7 @@
 }
 @Html.AntiForgeryToken()
 <h4>@Model.Group.Name</h4>
-<a class="btn btn-primary mt-3" href="#">View Member</a>
+<a class="btn btn-primary mt-3" href="/groups/@Model.Id/members">View Member</a>
 
 <div class="mt-1">
     <textarea id="member-emails" class="form-control" rows="2"></textarea>
@@ -37,12 +37,18 @@
             return console.error(err.toString());
         });
     }).catch(function (err) {
-        console.error(error.toString())
+        console.error(err.toString())
     });
 
     connection.on("GroupMessage", function (message, group, username) {
         pushNewMessage(message, group, username, true);
         seenMessage();
+    });
+
+    connection.on("RemoveGroupUser", function (result, groupId) {
+        if (result == "success") {
+            document.location.href = "/groups/1";
+        }
     });
 
     function pushNewMessage(message, group, username, toTheEnd) {
@@ -90,8 +96,10 @@
     document.getElementById("add-btn").addEventListener("click", function (event) {
         const memberElm = document.getElementById("member-emails");
         const members = memberElm.value;
-        members.value = '';
-        connection.invoke("AddMemberToGroup", members, '@Model.Id').catch(function (err) {
+        memberElm.value = "";
+        connection.invoke("AddMemberToGroup", members, '@Model.Id').then(function () {
+            alert("Success");
+        }).catch(function (err) {
             return console.error(err.toString());
         });
         event.preventDefault();
@@ -104,7 +112,7 @@
     }
 
     let pageIndex = 2;
-    const offsetTime = @Model.Messages.Max(mess => mess.Item2.SendTime);
+    const offsetTime = @(Model.Messages.Max(mess => mess.Item2?.SendTime) ?? 0);
     function viewmore() {
         const url = '@Url.Page("/Chat/GroupChatMessages", new {Id = Model.Id})';
         let data = `index=${pageIndex}`;
